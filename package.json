@@ -6,15 +6,17 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/index.js"
+    "dev": "nodemon -r dotenv/config --experimental-json-modules src/index.js"
   },
   "author": "Koustav majhi",
   "license": "ISC",
   "dependencies": {
-    "dotenv": "^16.4.7"
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "mongoose": "^8.9.7"
   },
   "devDependencies": {
-    "mongoose": "^8.9.7",
+    "nodemon": "^3.1.9",
     "prettier": "^3.4.2"
   }
 }
