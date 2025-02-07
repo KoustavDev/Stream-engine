@@ -13,18 +13,21 @@ export const registerUser = asyncHandler(async (req, res) => {
     throw new apiErrors(400, "All fields are required");
 
   //3. check the user is already register or not
-  const finalUserExist = await User.findOne({ $or: [{ username }, { email }] });
-  if (finalUserExist)
+  const userExist = await User.findOne({ $or: [{ username }, { email }] });
+  if (userExist)
     throw new apiErrors(409, "User with email or username already exists");
 
   //4. get the files
-  const avatarLocalPath = req.files?.avatat[0]?.path;
-  const coverImageLocalPath = req.files?.coverImage[0]?.path;
+  const avatarLocalPath = req.files?.avatar[0]?.path;
+  let coverImageLocalPath = "";
+  if (req.files.coverImage) coverImageLocalPath = req.files?.coverImage[0]?.path;
   if (!avatarLocalPath) throw new apiErrors(400, "Avatar file is required!");
 
   //5. Upload it to cloud
   const avatar = await uploadOnCloud(avatarLocalPath);
-  const coverImage = await uploadOnCloud(coverImageLocalPath);
+  const coverImage = coverImageLocalPath
+    ? await uploadOnCloud(coverImageLocalPath)
+    : "";
   if (!avatar)
     throw new apiErrors(500, "Failed to uploade avatar file in cloud");
 
@@ -35,17 +38,17 @@ export const registerUser = asyncHandler(async (req, res) => {
     fullName,
     password,
     avatar: avatar.url,
-    coverImage: coverImage?.url || "",
+    coverImage: coverImage ? coverImage.url : "",
   });
 
   //7. remove the password and refresh token
-  const finalUser = User.findById(newUser._id).select(
+  const finalUser = await User.findById(newUser._id).select(
     "-password -refreshToken"
   );
-  if (!finalUser) apiErrors(500, "Failed to create user!");
+  if (!finalUser) throw new apiErrors(500, "Failed to create user!");
 
   //8. Send it to the frontend
   return res
     .status(201)
-    .json(new apiSuccess(200,finalUser, "User is registered successfully!"));
+    .json(new apiSuccess(200, finalUser, "User is registered successfully!"));
 });
