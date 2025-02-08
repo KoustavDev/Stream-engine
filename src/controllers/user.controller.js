@@ -20,7 +20,8 @@ export const registerUser = asyncHandler(async (req, res) => {
   //4. get the files
   const avatarLocalPath = req.files?.avatar[0]?.path;
   let coverImageLocalPath = "";
-  if (req.files.coverImage) coverImageLocalPath = req.files?.coverImage[0]?.path;
+  if (req.files.coverImage)
+    coverImageLocalPath = req.files?.coverImage[0]?.path;
   if (!avatarLocalPath) throw new apiErrors(400, "Avatar file is required!");
 
   //5. Upload it to cloud
@@ -51,4 +52,87 @@ export const registerUser = asyncHandler(async (req, res) => {
   return res
     .status(201)
     .json(new apiSuccess(200, finalUser, "User is registered successfully!"));
+});
+
+// it generate a access and refresh token and save it to teh user DB.
+async function generateAccessAndRefreshToken(userId) {
+  try {
+    // Get the user from DB
+    const user = await User.findById(userId);
+
+    // Generate generate a access and refresh token
+    const accessToken = await user.generateAccessToken();
+    const refreshToken = await user.generateRefreshToken();
+
+    // Update in DB
+    user.refreshToken = refreshToken;
+    await User.save({ validateBeforeSave: false });
+    return { accessToken, refreshToken };
+  } catch (error) {
+    throw new apiErrors(500, "Failed to generate referesh and access token !");
+  }
+}
+
+export const loginUser = asyncHandler(async (req, res) => {
+  // Get the credentials
+  const { username, email, password } = req.body;
+
+  // verify it
+  if (!username && !email)
+    throw new apiErrors(400, "username or email is required");
+
+  // find user in DB bases on username or email
+  const user = await User.findOne({
+    $or: [{ username }, { email }],
+  });
+  if (!user) throw new apiErrors(404, "User does not exist");
+
+  // Check password
+  const passwordCheck = await user.isPasswordCorrect(password);
+  if (!passwordCheck) throw new apiErrors(401, "Invalid user password");
+
+  // generate access and refresh token
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    user._id
+  );
+
+  // Modify the output for sending (exclude sensitive fields)
+  delete user.password;
+  delete user.refreshToken;
+
+  // send cookies to frontend
+  const cookieConfig = {
+    httpOnly: true,
+    secure: true,
+  };
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, cookieConfig)
+    .cookie("refreshToken", refreshToken, cookieConfig)
+    .json(
+      new apiSuccess(
+        200,
+        { user, accessToken, refreshToken },
+        "User logged In Successfully"
+      )
+    );
+});
+
+export const logoutUser = asyncHandler(async (req, res) => {
+  // extract user ud
+  const userId = req.user._id;
+
+  // Update refresh token in DB
+  await User.findByIdAndUpdate(userId, { refreshToken: "" });
+
+  // Send result to frontend
+  const cookieConfig = {
+    httpOnly: true,
+    secure: true,
+  };
+  return res
+    .status(200)
+    .clearCookie("accessToken", cookieConfig)
+    .clearCookie("refreshToken", cookieConfig)
+    .json(new apiSuccess(200, {}, "User logged Out"));
 });
