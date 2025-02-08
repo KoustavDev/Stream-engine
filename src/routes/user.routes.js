@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginUser, logoutUser, registerUser } from "../controllers/user.controller.js";
+import { loginUser, logoutUser, registerUser, renewTokens } from "../controllers/user.controller.js";
 import upload from "../middlewares/multer.middleware.js";
 import verifyUser from "../middlewares/auth.middleware.js"
 
@@ -20,6 +20,7 @@ userRoute.route("/register").post(
 );
 
 userRoute.route("/login").post(loginUser);
+userRoute.route("/renew-tokens").post(renewTokens);
 
 // Secured routes
 // This routes are protected by my middleware shield.

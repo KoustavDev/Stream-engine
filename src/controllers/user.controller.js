@@ -3,6 +3,7 @@ import apiErrors from "../utils/apiErrors.js";
 import apiSuccess from "../utils/apiSuccess.js";
 import User from "../models/user.model.js";
 import uploadOnCloud from "../utils/fileUploader.js";
+import jwt from "jsonwebtoken";
 
 export const registerUser = asyncHandler(async (req, res) => {
   //1. get the credentials
@@ -97,8 +98,9 @@ export const loginUser = asyncHandler(async (req, res) => {
   );
 
   // Modify the output for sending (exclude sensitive fields)
-  delete user.password;
-  delete user.refreshToken;
+  const finalUser = user.toObject();
+  delete finalUser.password;
+  delete finalUser.refreshToken;
 
   // send cookies to frontend
   const cookieConfig = {
@@ -112,7 +114,7 @@ export const loginUser = asyncHandler(async (req, res) => {
     .json(
       new apiSuccess(
         200,
-        { user, accessToken, refreshToken },
+        { finalUser, accessToken, refreshToken },
         "User logged In Successfully"
       )
     );
@@ -135,4 +137,51 @@ export const logoutUser = asyncHandler(async (req, res) => {
     .clearCookie("accessToken", cookieConfig)
     .clearCookie("refreshToken", cookieConfig)
     .json(new apiSuccess(200, {}, "User logged Out"));
+});
+
+export const renewTokens = asyncHandler(async (req, res) => {
+  // collect refresh token from user
+  const userToken = req.cookies.refreshToken || req.body.refreshToken;
+
+  // Verification
+  if (!userToken) throw new apiErrors(401, "unauthorized request");
+
+  // Decodeing
+  const verifyedToken = jwt.verify(userToken, process.env.REFRESH_TOKEN_SECRET);
+  if (!verifyedToken) throw new apiErrors(401, "Invalid refresh token");
+
+  // check its presence in DB
+  const user = await User.findById(verifyedToken._id);
+  if (!user) throw new apiErrors(401, "Invalid refresh token");
+
+  // Match the tokens
+  if (user.refreshToken !== userToken)
+    throw new apiErrors(401, "Refresh token is expired or used");
+
+  // generate new access and refresh token
+  const { accessToken, refreshToken } = await generateAccessAndRefreshToken(
+    user._id
+  );
+
+  // Modify the output for sending (exclude sensitive fields)
+  const finalUser = user.toObject();
+  delete finalUser.password;
+  delete finalUser.refreshToken;
+
+  // send cookies to frontend
+  const cookieConfig = {
+    httpOnly: true,
+    secure: true,
+  };
+  return res
+    .status(200)
+    .cookie("accessToken", accessToken, cookieConfig)
+    .cookie("refreshToken", refreshToken, cookieConfig)
+    .json(
+      new apiSuccess(
+        200,
+        { finalUser, accessToken, refreshToken },
+        "User token renew successfull"
+      )
+    );
 });
