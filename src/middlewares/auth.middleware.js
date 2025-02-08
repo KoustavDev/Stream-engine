@@ -11,7 +11,7 @@ const verifyUser = asyncHandler(async (req, _, next) => {
     // Get the JWT token from cookies or Authorization header.
     const token =
       req.cookies?.accessToken ||
-      req.header("Authorization").replace("Bearer ", "");
+      req.header("Authorization")?.replace("Bearer ", "");
 
     if (!token) throw new apiErrors(401, "Unauthorized request");
 

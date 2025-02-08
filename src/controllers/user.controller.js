@@ -66,7 +66,7 @@ async function generateAccessAndRefreshToken(userId) {
 
     // Update in DB
     user.refreshToken = refreshToken;
-    await User.save({ validateBeforeSave: false });
+    await user.save({ validateBeforeSave: false });
     return { accessToken, refreshToken };
   } catch (error) {
     throw new apiErrors(500, "Failed to generate referesh and access token !");
