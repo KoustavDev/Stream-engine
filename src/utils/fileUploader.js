@@ -7,7 +7,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-const uploadOnCloud = async (filePath) => {
+export const uploadOnCloud = async (filePath) => {
     try {
         if(!filePath) return null;
         const response = await cloudinary.uploader.upload(filePath, {resource_type: "auto"});
@@ -21,4 +21,15 @@ const uploadOnCloud = async (filePath) => {
     }
 }
 
-export default uploadOnCloud;
+export const deleteOnCloud = async (publicId) => {
+  console.log(publicId);
+  try {
+    const result = await cloudinary.uploader.delete_resources([publicId], {
+      resource_type: "auto",
+    });
+    console.log(result);
+    return result;
+  } catch (error) {
+    return null;
+  }
+}

@@ -2,8 +2,9 @@ import asyncHandler from "../utils/asyncHandler.js";
 import apiErrors from "../utils/apiErrors.js";
 import apiSuccess from "../utils/apiSuccess.js";
 import User from "../models/user.model.js";
-import uploadOnCloud from "../utils/fileUploader.js";
+import { deleteOnCloud, uploadOnCloud } from "../utils/fileUploader.js";
 import jwt from "jsonwebtoken";
+import extractPublicId from "../utils/fileRemover.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
   //1. get the credentials
@@ -184,4 +185,96 @@ export const renewTokens = asyncHandler(async (req, res) => {
         "User token renew successfull"
       )
     );
+});
+
+export const changeCurrentPassword = asyncHandler(async (req, res) => {
+  // Get the current password and new password from user. //
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword)
+    throw new apiErrors(400, "Both password is required!");
+
+  // get the user from db
+  const user = await User.findById(req.user?._id);
+
+  // Check password
+  const passwordCheck = await user.isPasswordCorrect(currentPassword);
+  if (!passwordCheck) throw new apiErrors(401, "Invalid password !");
+
+  // save it to DB
+  user.password = newPassword;
+  const newUser = await user.save({ validateBeforeSave: false }); // Use this save method to trigger the pre-save (password hashing) middleward
+  if (!newUser) throw new apiErrors(500, "Failed to change password");
+
+  // Send response
+  return res
+    .status(200)
+    .json(new apiSuccess(200, {}, "Password changed successfully!"));
+});
+
+export const getCurrentUser = asyncHandler(async (req, res) => {
+  return res
+    .status(200)
+    .json(new apiSuccess(200, req.user, "User fetched successfully"));
+});
+
+export const updateAccountDetails = asyncHandler(async (req, res) => {
+  // Get user details
+  const { fullName, email } = req.body;
+
+  // Verify it
+  if (!fullName || !email) throw new apiErrors(400, "All fields are required");
+
+  //check the user is already register or not
+  const userExist = await User.findOne({ email });
+  if (userExist) throw new apiErrors(409, "User with email already exists");
+
+  // update the user details
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        fullName,
+        email,
+      },
+    },
+    { new: true }
+  ).select("-password");
+  if (!user) throw new apiErrors(500, "Failed to update account details");
+
+  // Send it to frontend
+  return res
+    .status(200)
+    .json(new apiSuccess(200, user, "Account details updated successfully"));
+});
+
+export const updateAvatar = asyncHandler(async (req, res) => {
+  // get file path
+  const path = req.file?.path;
+
+  // verify it
+  if (!path) throw new apiErrors(400, "Avatar file is missing");
+
+  // Uploade to new avatar
+  const avatar = await uploadOnCloud(path);
+  if (!avatar) throw new apiErrors(500, "failed to upload avatar file");
+
+  // delete file on cloud
+  // const publicId = extractPublicId(req.user.avatar);
+  // const deletedAvatar = await deleteOnCloud(publicId);
+  // if (deletedAvatar?.result !== "ok")
+  //   throw new apiErrors(500, "failed to delete avatar file");
+
+  // Update to DB
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        avatar: avatar.url,
+      },
+    },
+    { new: true }
+  ).select("-password");
+  return res
+    .status(200)
+    .json(new apiSuccess(200, user, "Avatar image updated successfully"));
 });
