@@ -260,8 +260,8 @@ export const updateAvatar = asyncHandler(async (req, res) => {
 
   // delete file on cloud
   const publicId = extractPublicId(req.user.avatar);
-  const deletedAvatar = await deleteOnCloud(publicId);
-  if (deletedAvatar?.result !== "ok")
+  const deletedCoverImage = await deleteOnCloud(publicId);
+  if (deletedCoverImage?.result !== "ok")
     throw new apiErrors(500, "failed to delete avatar file");
 
   // Update to DB
@@ -277,4 +277,37 @@ export const updateAvatar = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new apiSuccess(200, user, "Avatar image updated successfully"));
+});
+
+export const updateCoverImage = asyncHandler(async (req, res) => {
+  // get file path
+  const path = req.file?.path;
+
+  // verify it
+  if (!path) throw new apiErrors(400, "Cover Image file is missing");
+
+  // Uploade to new Cover Image
+  const coverImage = await uploadOnCloud(path);
+  if (!coverImage)
+    throw new apiErrors(500, "failed to upload Cover Image file");
+
+  // delete file on cloud
+  const publicId = extractPublicId(req.user.coverImage);
+  const deletedCoverImage = await deleteOnCloud(publicId);
+  if (deletedCoverImage?.result !== "ok")
+    throw new apiErrors(500, "failed to delete Cover Image file");
+
+  // Update to DB
+  const user = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $set: {
+        coverImage: coverImage.url,
+      },
+    },
+    { new: true }
+  ).select("-password");
+  return res
+    .status(200)
+    .json(new apiSuccess(200, user, "Cover image updated successfully"));
 });
