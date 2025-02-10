@@ -259,10 +259,10 @@ export const updateAvatar = asyncHandler(async (req, res) => {
   if (!avatar) throw new apiErrors(500, "failed to upload avatar file");
 
   // delete file on cloud
-  // const publicId = extractPublicId(req.user.avatar);
-  // const deletedAvatar = await deleteOnCloud(publicId);
-  // if (deletedAvatar?.result !== "ok")
-  //   throw new apiErrors(500, "failed to delete avatar file");
+  const publicId = extractPublicId(req.user.avatar);
+  const deletedAvatar = await deleteOnCloud(publicId);
+  if (deletedAvatar?.result !== "ok")
+    throw new apiErrors(500, "failed to delete avatar file");
 
   // Update to DB
   const user = await User.findByIdAndUpdate(
