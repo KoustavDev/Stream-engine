@@ -5,6 +5,7 @@ import User from "../models/user.model.js";
 import { deleteOnCloud, uploadOnCloud } from "../utils/fileUploader.js";
 import jwt from "jsonwebtoken";
 import extractPublicId from "../utils/fileRemover.js";
+import mongoose from "mongoose";
 
 export const registerUser = asyncHandler(async (req, res) => {
   //1. get the credentials
@@ -351,7 +352,8 @@ export const channelDetails = asyncHandler(async (req, res) => {
       },
     },
     {
-      $project: {  // Channel var aa aai field gulo thakba
+      $project: {
+        // Channel var aa aai field gulo thakba
         username: 1,
         email: 1,
         fullName: 1,
@@ -370,4 +372,48 @@ export const channelDetails = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new apiSuccess(200, channel[0], "User channel fetched successfully"));
+});
+
+export const watchHistory = asyncHandler(async (req, res) => {
+  const user = await User.aggregate([
+    { $match: { _id: new mongoose.Types.ObjectId(req.user._id) } },
+    {
+      $lookup: {
+        from: "videos",
+        foreignField: "_id", // match _id from user
+        localField: "watchHistory", // match watchHistory from videos
+        as: "watchHistory", // store in this field
+        pipeline: [
+          {
+            // we are in videos collection
+            $lookup: {
+              from: "users",
+              foreignField: "_id", // match _id from videos
+              localField: "owner", // match owner from videos
+              as: "owner", // store in this field
+              pipeline: [
+                {
+                  // we are in users collection
+                  $project: { fullName: 1, username: 1, avatar: 1 }, // only add these fields from users collection
+                },
+              ],
+            },
+          },
+          { $addFields: { owner: { $first: "$owner" } } }, // Dont know. test it !
+        ],
+      },
+    },
+  ]);
+
+  if (!user?.length) throw new apiErrors(500, "failed to fetch videos!");
+
+  return res
+    .status(200)
+    .json(
+      new apiSuccess(
+        200,
+        user[0].watchHistory,
+        "Watch history fetched successfully"
+      )
+    );
 });

@@ -9,6 +9,8 @@ import {
   updateAccountDetails,
   updateAvatar,
   updateCoverImage,
+  channelDetails,
+  watchHistory,
 } from "../controllers/user.controller.js";
 import upload from "../middlewares/multer.middleware.js";
 import verifyUser from "../middlewares/auth.middleware.js"
@@ -45,5 +47,7 @@ userRoute
 userRoute
   .route("/update-coverImage")
   .patch(verifyUser, upload.single("coverImage"), updateCoverImage);
+userRoute.route("/channel/:username").get(verifyUser, channelDetails);
+userRoute.route("/watch-history").get(verifyUser, watchHistory);
 
 export default userRoute;
