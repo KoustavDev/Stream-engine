@@ -366,7 +366,6 @@ export const channelDetails = asyncHandler(async (req, res) => {
     },
   ]);
 
-  console.log(channel);
   if (!channel?.length) throw new apiErrors(404, "channel does not exist");
 
   return res
@@ -376,7 +375,7 @@ export const channelDetails = asyncHandler(async (req, res) => {
 
 export const watchHistory = asyncHandler(async (req, res) => {
   const user = await User.aggregate([
-    { $match: { _id: new mongoose.Types.ObjectId(req.user._id) } },
+    { $match: { _id: new mongoose.Types.ObjectId(req.user._id) } }, // Use this syntax to get the '67a64deb559aaf49093646d9' from new ObjectId('67a64deb559aaf49093646d9')
     {
       $lookup: {
         from: "videos",
