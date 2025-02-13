@@ -8,6 +8,7 @@ import {
   getCurrentUser,
   updateAccountDetails,
   updateAvatar,
+  updateCoverImage,
 } from "../controllers/user.controller.js";
 import upload from "../middlewares/multer.middleware.js";
 import verifyUser from "../middlewares/auth.middleware.js"
@@ -41,4 +42,8 @@ userRoute.route("/update-account").patch(verifyUser, updateAccountDetails);
 userRoute
   .route("/update-avatar")
   .patch(verifyUser, upload.single("avatar"), updateAvatar);
+userRoute
+  .route("/update-coverImage")
+  .patch(verifyUser, upload.single("coverImage"), updateCoverImage);
+
 export default userRoute;

@@ -311,3 +311,63 @@ export const updateCoverImage = asyncHandler(async (req, res) => {
     .status(200)
     .json(new apiSuccess(200, user, "Cover image updated successfully"));
 });
+
+export const channelDetails = asyncHandler(async (req, res) => {
+  // get the channel username
+  const { username } = req.params;
+  if (!username) throw new apiErrors(400, "username is missing");
+
+  // Aggregation pipelines
+  const channel = await User.aggregate([
+    { $match: { username: username } }, // Find the channel (user)
+    {
+      $lookup: {
+        // make an user[] where the user._id from the channel === _id get from match part
+        from: "subscriptions", // the name of collection
+        foreignField: "channel", // jaa doc aar channel aa jaa user._id acha
+        localField: "_id", // main channel aar user._id , tokobar match hoocha
+        as: "subscribers", // taka store koro subscribers field aa as a user[]
+      },
+    },
+    {
+      $lookup: {
+        from: "subscriptions",
+        foreignField: "subscriber",
+        localField: "_id",
+        as: "subscribedTo",
+      },
+    },
+    {
+      $addFields: {
+        subscribersCount: { $size: "$subscribers" }, // subscribers array size
+        subscribedToCount: { $size: "$subscribedTo" }, // subscribedTo array size
+        isSubscribed: {
+          $cond: {
+            if: { $in: [req.user?._id, "$subscribers.subscriber"] }, //User id joodi channel aar subscribers list aa thaka
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    {
+      $project: {  // Channel var aa aai field gulo thakba
+        username: 1,
+        email: 1,
+        fullName: 1,
+        avatar: 1,
+        coverImage: 1,
+        subscribersCount: 1,
+        subscribedToCount: 1,
+        isSubscribed: 1,
+      },
+    },
+  ]);
+
+  console.log(channel);
+  if (!channel?.length) throw new apiErrors(404, "channel does not exist");
+
+  return res
+    .status(200)
+    .json(new apiSuccess(200, channel[0], "User channel fetched successfully"));
+});
