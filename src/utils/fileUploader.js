@@ -29,3 +29,11 @@ export const deleteOnCloud = async (publicId) => {
     return null;
   }
 }
+export const deleteOnCloudVideo = async (publicId) => {
+  try {
+    const result = await cloudinary.uploader.destroy(publicId, {resource_type: "video"});
+    return result;
+  } catch (error) {
+    return null;
+  }
+}

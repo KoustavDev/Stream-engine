@@ -3,7 +3,7 @@ import apiErrors from "../utils/apiErrors.js";
 import apiSuccess from "../utils/apiSuccess.js";
 import User from "../models/user.model.js";
 import Video from "../models/video.model.js";
-import { deleteOnCloud, uploadOnCloud } from "../utils/fileUploader.js";
+import { deleteOnCloud, deleteOnCloudVideo, uploadOnCloud } from "../utils/fileUploader.js";
 import extractPublicId from "../utils/fileRemover.js";
 
 export const publishVideo = asyncHandler(async (req, res) => {
@@ -111,4 +111,31 @@ export const updateVideo = asyncHandler(async (req, res) => {
     .json(
       new apiSuccess(200, newVideo, "Video details is updated successfully.")
     );
+});
+
+export const deleteVideo = asyncHandler(async (req, res) => {
+  // Get the video id
+  const { videoId } = req.params;
+  if (!videoId) throw new apiErrors(400, "invalid video id!");
+
+  // get the video from DB
+  const video = await Video.findById(videoId);
+  if (!video) throw new apiErrors(404, "Video not found!.");
+
+  // Delete it from DB
+  const deletedVideo = await Video.findByIdAndDelete(videoId);
+  if (!deletedVideo) throw new apiErrors(500, "Failed to delete video");
+
+  // Delete it from cloud
+  const publicIdThumbnail = extractPublicId(video.thumbnail);
+  const publicIdVideo = extractPublicId(video.videoFile);
+  
+  const deletedVideoFile = await deleteOnCloudVideo(publicIdVideo);
+  const deletedThumbnail = await deleteOnCloud(publicIdThumbnail);
+  if (deletedThumbnail?.result !== "ok" || deletedVideoFile?.result !== "ok")
+    throw new apiErrors(500, "failed to delete video and thumbnail");
+
+  return res
+    .status(200)
+    .json(new apiSuccess(200, deletedVideo, "Video is deleted"));
 });
