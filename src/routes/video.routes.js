@@ -1,6 +1,6 @@
 import { Router } from "express";
 import verifyUser from "../middlewares/auth.middleware.js";
-import { publishVideo } from "../controllers/video.controller.js";
+import { getVideoById, publishVideo } from "../controllers/video.controller.js";
 import upload from "../middlewares/multer.middleware.js";
 
 
@@ -21,5 +21,7 @@ videoRoute.route("/").post(
   ]),
   publishVideo
 );
+
+videoRoute.route("/:videoId").get(getVideoById);
 
 export default videoRoute;

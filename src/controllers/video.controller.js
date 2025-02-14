@@ -21,8 +21,7 @@ export const publishVideo = asyncHandler(async (req, res) => {
   const video = await uploadOnCloud(videoPath);
   const thumbnail = await uploadOnCloud(thumbnailPath);
 
-  if (!video || !thumbnail)
-    throw new apiErrors(500, "Failed to upload files.");
+  if (!video || !thumbnail) throw new apiErrors(500, "Failed to upload files.");
 
   // Uploade to the DB
   const newVideo = await Video.create({
@@ -46,4 +45,29 @@ export const publishVideo = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new apiSuccess(200, newVideo, "Video uploaded successfully!"));
+});
+
+export const getVideoById = asyncHandler(async (req, res) => {
+  // Get the video id
+  const { videoId } = req.params;
+  if (!videoId) throw new apiErrors(400, "Video id is required!");
+
+  // get the video from DB
+  const video = await Video.findById(videoId);
+  if (!video) throw new apiErrors(404, "Failed to fetch video.");
+
+  // Update the watch history of the user
+  const updateWatchHistory = await User.findByIdAndUpdate(
+    req.user?._id,
+    {
+      $push: { watchHistory: video._id },
+    },
+    { new: true }
+  );
+  if (!updateWatchHistory)
+    throw new apiErrors(500, "Failed to update watch histroy.");
+
+  return res
+    .status(200)
+    .json(new apiSuccess(200, video, "Video is fetched successfully."));
 });
