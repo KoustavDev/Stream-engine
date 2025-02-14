@@ -3,7 +3,11 @@ import apiErrors from "../utils/apiErrors.js";
 import apiSuccess from "../utils/apiSuccess.js";
 import User from "../models/user.model.js";
 import Video from "../models/video.model.js";
-import { deleteOnCloud, deleteOnCloudVideo, uploadOnCloud } from "../utils/fileUploader.js";
+import {
+  deleteOnCloud,
+  deleteOnCloudVideo,
+  uploadOnCloud,
+} from "../utils/fileUploader.js";
 import extractPublicId from "../utils/fileRemover.js";
 
 export const publishVideo = asyncHandler(async (req, res) => {
@@ -129,7 +133,7 @@ export const deleteVideo = asyncHandler(async (req, res) => {
   // Delete it from cloud
   const publicIdThumbnail = extractPublicId(video.thumbnail);
   const publicIdVideo = extractPublicId(video.videoFile);
-  
+
   const deletedVideoFile = await deleteOnCloudVideo(publicIdVideo);
   const deletedThumbnail = await deleteOnCloud(publicIdThumbnail);
   if (deletedThumbnail?.result !== "ok" || deletedVideoFile?.result !== "ok")
@@ -138,4 +142,42 @@ export const deleteVideo = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new apiSuccess(200, deletedVideo, "Video is deleted"));
+});
+
+export const getAllVideos = asyncHandler(async (req, res) => {
+  // Get the details
+  const {
+    page = 1,
+    limit = 10,
+    query,
+    sortBy = "createdAt",
+    sortType = "desc",
+    userId,
+  } = req.query;
+
+  const filter = {};
+
+  // Search query filter
+  if (query) {
+    filter.$or = [
+      { title: { $regex: query, $options: "i" } },
+      { description: { $regex: query, $options: "i" } },
+    ];
+  }
+
+  // Filter by userId if provided
+  if (userId) filter.userId = userId;
+
+  // Sorting
+  const options = {
+    page: parseInt(page),
+    limit: parseInt(limit),
+    sort: { [sortBy]: sortType === "asc" ? 1 : -1 },
+  };
+
+  // Fetch paginated results
+  const result = await Video.paginate(filter, options);
+  if (!result) throw new apiErrors(500, "No more videos left!");
+  
+  return res.status(200).json(new apiSuccess(200, result, "Video is fetched"));
 });
