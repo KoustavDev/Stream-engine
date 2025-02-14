@@ -4,6 +4,7 @@ import apiSuccess from "../utils/apiSuccess.js";
 import User from "../models/user.model.js";
 import Video from "../models/video.model.js";
 import { deleteOnCloud, uploadOnCloud } from "../utils/fileUploader.js";
+import extractPublicId from "../utils/fileRemover.js";
 
 export const publishVideo = asyncHandler(async (req, res) => {
   // get the video details
@@ -70,4 +71,44 @@ export const getVideoById = asyncHandler(async (req, res) => {
   return res
     .status(200)
     .json(new apiSuccess(200, video, "Video is fetched successfully."));
+});
+
+export const updateVideo = asyncHandler(async (req, res) => {
+  // Get data from client
+  const { videoId } = req.params;
+  const { title, description } = req.body;
+  if (!title || !description || !videoId)
+    throw new apiErrors(400, "All fields are required");
+
+  // Get new thumbnail
+  const thumbnailPath = req.file?.path;
+  if (!thumbnailPath) throw new apiErrors(400, "Thumbnail is required!");
+
+  // get the video from DB
+  const video = await Video.findById(videoId);
+  if (!video) throw new apiErrors(404, "Failed to fetch video.");
+
+  // Uploade thumbnail on cloud
+  const newThumbnail = await uploadOnCloud(thumbnailPath);
+  if (!newThumbnail) throw new apiErrors(500, "Failed to upload thumbnail.");
+
+  // delete old thumbnail on cloud
+  const publicId = extractPublicId(video.thumbnail);
+  const deletedThumbnail = await deleteOnCloud(publicId);
+  if (deletedThumbnail?.result !== "ok")
+    throw new apiErrors(500, "failed to delete thumbnail");
+
+  // Update data
+  video.title = title;
+  video.description = description;
+  video.thumbnail = newThumbnail.url;
+
+  // Update in DB
+  const newVideo = await video.save({ validateBeforeSave: false });
+
+  return res
+    .status(200)
+    .json(
+      new apiSuccess(200, newVideo, "Video details is updated successfully.")
+    );
 });
