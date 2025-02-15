@@ -9,6 +9,7 @@ import {
   uploadOnCloud,
 } from "../utils/fileUploader.js";
 import extractPublicId from "../utils/fileRemover.js";
+import mongoose from "mongoose";
 
 export const publishVideo = asyncHandler(async (req, res) => {
   // get the video details
@@ -57,8 +58,133 @@ export const getVideoById = asyncHandler(async (req, res) => {
   const { videoId } = req.params;
   if (!videoId) throw new apiErrors(400, "Video id is required!");
 
-  // get the video from DB
-  const video = await Video.findById(videoId);
+  // ensure this is an ObjectId, or cast it
+  const userId = req.user._id;
+
+  // Update the views
+  await Video.updateOne(
+    { _id: new mongoose.Types.ObjectId(videoId) },
+    { $inc: { views: 1 } }
+  );
+
+  const video = await Video.aggregate([
+    // Stage 1: Match the video document with the specified _id.
+    {
+      $match: { _id: new mongoose.Types.ObjectId(videoId) },
+    },
+    // Stage 2: Lookup likes for the video where the 'comment' field is empty (or missing).
+    {
+      $lookup: {
+        from: "likes", // Collection to join.
+        let: { videoId: "$_id" }, // Define a variable to hold the video's _id.
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $and: [
+                  { $eq: ["$video", "$$videoId"] }, // Match likes where 'video' equals the video's _id.
+                  { $eq: [{ $ifNull: ["$comment", ""] }, ""] }, // Ensure 'comment' is either null/missing or an empty string.
+                ],
+              },
+            },
+          },
+        ],
+        as: "likes", // Output the matching documents as the 'likes' array.
+      },
+    },
+    // Stage 3: Lookup owner details from the 'users' collection for the video owner.
+    {
+      $lookup: {
+        from: "users", // Collection to join.
+        foreignField: "_id", // Field in the users collection.
+        localField: "owner", // Field in the video document.
+        as: "owner", // Output the matching owner details.
+        pipeline: [
+          { $project: { fullName: 1, username: 1, avatar: 1 } }, // Project only necessary fields.
+        ],
+      },
+    },
+    // Stage 4: Lookup comments for the video.
+    {
+      $lookup: {
+        from: "comments", // Collection to join for comments.
+        foreignField: "video", // Field in comments that matches the video's _id.
+        localField: "_id", // Video's _id.
+        as: "comments", // Output the comments array.
+        pipeline: [
+          // Project only the content and owner of each comment.
+          { $project: { content: 1, owner: 1 } },
+          // For each comment, lookup the owner's details.
+          {
+            $lookup: {
+              from: "users",
+              foreignField: "_id",
+              localField: "owner",
+              as: "owner",
+              pipeline: [{ $project: { fullName: 1, username: 1, avatar: 1 } }],
+            },
+          },
+          // Lookup likes for each comment.
+          {
+            $lookup: {
+              from: "likes",
+              foreignField: "comment", // Match likes where the 'comment' field equals the comment's _id.
+              localField: "_id",
+              as: "like", // Temporarily store these likes in the 'like' array.
+            },
+          },
+          // Add computed fields: likesCount and isLiked for each comment.
+          {
+            $addFields: {
+              likesCount: { $size: "$like" }, // Count the number of likes for the comment.
+              isLiked: {
+                $cond: {
+                  if: {
+                    // Check if the current user's id exists in the 'likedBy' fields of the likes.
+                    $in: [
+                      new mongoose.Types.ObjectId(userId),
+                      { $map: { input: "$like", as: "l", in: "$$l.likedBy" } },
+                    ],
+                  },
+                  then: true,
+                  else: false,
+                },
+              },
+            },
+          },
+          // Remove the temporary 'like' array from each comment.
+          { $project: { like: 0 } },
+        ],
+      },
+    },
+    // Stage 5: Add top-level fields for overall video likes.
+    {
+      $addFields: {
+        likesCount: { $size: "$likes" }, // Count total likes for the video.
+        isLiked: {
+          $cond: {
+            if: {
+              // Check if the current user's id exists in any 'likedBy' field of the likes.
+              $in: [
+                new mongoose.Types.ObjectId(userId),
+                { $map: { input: "$likes", as: "l", in: "$$l.likedBy" } },
+              ],
+            },
+            then: true,
+            else: false,
+          },
+        },
+      },
+    },
+    // Stage 6: Remove the temporary 'likes' array from the final output.
+    {
+      $project: {
+        likes: 0,
+      },
+    },
+  ]);
+
+
   if (!video) throw new apiErrors(404, "Failed to fetch video.");
 
   // Update the watch history of the user
@@ -178,6 +304,6 @@ export const getAllVideos = asyncHandler(async (req, res) => {
   // Fetch paginated results
   const result = await Video.paginate(filter, options);
   if (!result) throw new apiErrors(500, "No more videos left!");
-  
+
   return res.status(200).json(new apiSuccess(200, result, "Video is fetched"));
 });
