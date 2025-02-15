@@ -31,7 +31,7 @@ export const isCommentLiked = async (videoId, commentId, userId) => {
 export const toggleVideoLike = asyncHandler(async (req, res) => {
   // get the video id
   const { videoId } = req.params;
-  if (!videoId) throw new apiErrors(400, "Provide a video id!");
+    
 
   // Check user is already liked or not
   const isLiked = await isVideoLiked(videoId, req.user._id);
