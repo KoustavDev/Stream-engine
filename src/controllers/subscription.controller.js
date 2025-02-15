@@ -39,3 +39,40 @@ export const toggleSubscription = asyncHandler(async (req, res) => {
     .status(200)
     .json(new apiSuccess(200, {}, "Subscription is toggeled"));
 });
+
+export const getSubscribedChannels = asyncHandler(async (req, res) => {
+  // Get userId
+  const { subscriberId } = req.params;
+  if (!subscriberId) throw new apiErrors(400, "Provide subscriber id!");
+
+  // Fetch channel list which subscribed by you
+  const channelList = await Subscription.find({
+    subscriber: subscriberId,
+  }).populate("channel");
+
+  if (!channelList) throw new apiErrors(500, "Failed to get channel list");
+
+  return res
+    .status(200)
+    .json(
+      new apiSuccess(200, channelList, "Subscribed channel list is fetched")
+    );
+});
+
+export const getChannelSubscriberList = asyncHandler(async (req, res) => {
+  // Get details
+  const { channelId } = req.params;
+  if (!channelId) throw new apiErrors(400, "Provide a channel id!");
+
+  // Fetch subscriber list who subscribed this channel
+  const subscriberList = await Subscription.find({
+    channel: channelId,
+  }).populate("subscriber");
+
+  if (!subscriberList)
+    throw new apiErrors(500, "Failed to get subscriber list");
+
+  return res
+    .status(200)
+    .json(new apiSuccess(200, subscriberList, "subscriber list is fetched"));
+});
