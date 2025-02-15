@@ -19,12 +19,15 @@ app.use(cookieParser());
 import userRoute from "./routes/user.routes.js";
 import videoRoute from "./routes/video.routes.js";
 import likeRoute from "./routes/likes.routes.js";
+import commentRoute from "./routes/comments.routes.js";
 
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/videos", videoRoute);
 app.use("/api/v1/likes", likeRoute);
+app.use("/api/v1/comments", commentRoute);
 
 export default app;
 // http://localhost:8000/api/v1/users/register
 // http://localhost:8000/api/v1/videos
 // http://localhost:8000/api/v1/likes
+// http://localhost:8000/api/v1/comments
