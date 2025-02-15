@@ -1,8 +1,6 @@
 import asyncHandler from "../utils/asyncHandler.js";
 import apiErrors from "../utils/apiErrors.js";
 import apiSuccess from "../utils/apiSuccess.js";
-import User from "../models/user.model.js";
-import Video from "../models/video.model.js";
 import { Comment } from "../models/comments.model.js";
 
 export const addComment = asyncHandler(async (req, res) => {
