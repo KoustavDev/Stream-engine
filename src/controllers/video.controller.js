@@ -191,7 +191,7 @@ export const getVideoById = asyncHandler(async (req, res) => {
   const updateWatchHistory = await User.findByIdAndUpdate(
     req.user?._id,
     {
-      $push: { watchHistory: video._id },
+      $push: { watchHistory: videoId },
     },
     { new: true }
   );
