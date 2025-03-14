@@ -1,3 +1,4 @@
+import { io } from "../app.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import apiErrors from "../utils/apiErrors.js";
 import apiSuccess from "../utils/apiSuccess.js";
@@ -6,51 +7,107 @@ import Video from "../models/video.model.js";
 import {
   deleteOnCloud,
   deleteOnCloudVideo,
+  uploadFileWithProgress,
   uploadOnCloud,
 } from "../utils/fileUploader.js";
 import extractPublicId from "../utils/fileRemover.js";
 import mongoose from "mongoose";
 
 export const publishVideo = asyncHandler(async (req, res) => {
-  // get the video details
-  const { title, description } = req.body;
+  // Get socket Id
+  const { socketId, title, description } = req.body;
+  if (!socketId) return res.status(400).send("Socket ID is required.");
+
+  // Validate fields
   if (!title || !description)
     throw new apiErrors(400, "All fields are required");
 
-  // get the video & thumbnail
-  const videoPath = req.files?.videoFile[0]?.path;
-  const thumbnailPath = req.files?.thumbnail[0]?.path;
-  if (!videoPath || !thumbnailPath)
-    throw new apiErrors(400, "Video and thumbnail is required!");
-
-  // Uploade on cloud
-  const video = await uploadOnCloud(videoPath);
-  const thumbnail = await uploadOnCloud(thumbnailPath);
-
-  if (!video || !thumbnail) throw new apiErrors(500, "Failed to upload files.");
-
-  // Uploade to the DB
-  const newVideo = await Video.create({
-    videoFile: video.url,
-    thumbnail: thumbnail.url,
-    title,
-    description,
-    duration: video.duration,
-    views: 0,
-    isPublished: true,
-    owner: req.user,
-  });
-  if (!newVideo) {
-    // Delete files on cloud in case of DB failour.
-    await deleteOnCloud(video.public_id);
-    await deleteOnCloud(thumbnail.public_id);
-    throw new apiErrors(500, "Failed to uploade on database.");
+  // Check if files exist
+  if (!req.files?.videoFile || !req.files?.thumbnail) {
+    io.to(socketId).emit("uploadError", {
+      message: "Video and thumbnail are required",
+    });
+    throw new apiErrors(400, "Video and thumbnail are required!");
   }
 
-  // Send it to frontend
-  return res
-    .status(200)
-    .json(new apiSuccess(200, newVideo, "Video uploaded successfully!"));
+  const videoFile = req.files.videoFile[0];
+  const thumbnail = req.files.thumbnail[0];
+
+  try {
+    // Report 0% progress at start
+    io.to(socketId).emit("uploadProgress", {
+      percent: 0,
+      bytesUploaded: 0,
+      totalBytes: videoFile.size,
+      stage: "video",
+    });
+
+    // Upload video with progress tracking
+    const videoResult = await uploadFileWithProgress(
+      videoFile,
+      socketId,
+      "video"
+    );
+
+    // // Report thumbnail upload starting
+    // io.to(socketId).emit("uploadProgress", {
+    //   percent: 0,
+    //   bytesUploaded: 0,
+    //   totalBytes: thumbnail.size,
+    //   stage: "thumbnail",
+    // });
+
+    // Upload thumbnail
+    const thumbnailResult = await uploadOnCloud(thumbnail?.path);
+
+    // Check if uploads were successful
+    if (!videoResult || !thumbnailResult) {
+      io.to(socketId).emit("uploadError", {
+        message: "Failed to upload files",
+      });
+      throw new apiErrors(500, "Failed to upload files.");
+    }
+
+    // Upload to the DB
+    const newVideo = await Video.create({
+      videoFile: videoResult.url,
+      thumbnail: thumbnailResult.url,
+      title,
+      description,
+      duration: videoResult.duration,
+      views: 0,
+      isPublished: true,
+      owner: req.user,
+    });
+
+    if (!newVideo) {
+      // Delete files on cloud in case of DB failure
+      await deleteOnCloud(videoResult.public_id);
+      await deleteOnCloud(thumbnailResult.public_id);
+      io.to(socketId).emit("uploadError", {
+        message: "Failed to upload to database",
+      });
+      throw new apiErrors(500, "Failed to upload to database.");
+    }
+
+    // Send completion event
+    io.to(socketId).emit("uploadComplete", {
+      videoUrl: videoResult.url,
+      thumbnailUrl: thumbnailResult.url,
+      videoId: newVideo._id,
+    });
+
+    // Send it to frontend
+    return res
+      .status(200)
+      .json(new apiSuccess(200, newVideo, "Video uploaded successfully!"));
+  } catch (error) {
+    console.error("Error during upload:", error);
+    io.to(socketId).emit("uploadError", {
+      message: error.message || "Error during upload",
+    });
+    return res.status(500).send(error.message || "Server error during upload");
+  }
 });
 
 export const getVideoById = asyncHandler(async (req, res) => {
@@ -183,7 +240,6 @@ export const getVideoById = asyncHandler(async (req, res) => {
       },
     },
   ]);
-
 
   if (!video) throw new apiErrors(404, "Failed to fetch video.");
 
