@@ -5,12 +5,14 @@ import {
   registerUser,
   renewTokens,
   changeCurrentPassword,
+  sendEmailVerification,
   getCurrentUser,
   updateAccountDetails,
   updateAvatar,
   updateCoverImage,
   channelDetails,
   watchHistory,
+  verifyEmail,
 } from "../controllers/user.controller.js";
 import upload from "../middlewares/multer.middleware.js";
 import verifyUser from "../middlewares/auth.middleware.js"
@@ -33,6 +35,8 @@ userRoute.route("/register").post(
 
 userRoute.route("/login").post(loginUser);
 userRoute.route("/renew-tokens").post(renewTokens);
+userRoute.route("/send-email").post(sendEmailVerification);
+userRoute.route("/verify-email").post(verifyEmail);
 
 // Secured routes
 // This routes are protected by my middleware shield.

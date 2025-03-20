@@ -6,6 +6,8 @@ import { deleteOnCloud, uploadOnCloud } from "../utils/fileUploader.js";
 import jwt from "jsonwebtoken";
 import extractPublicId from "../utils/fileRemover.js";
 import mongoose from "mongoose";
+import { generateOTP, storeOTP, verifyOTP } from "../utils/redisActions.js";
+import sendEmail from "../utils/email.js";
 
 export const registerUser = asyncHandler(async (req, res) => {
   //1. get the credentials
@@ -415,4 +417,41 @@ export const watchHistory = asyncHandler(async (req, res) => {
         "Watch history fetched successfully"
       )
     );
+});
+
+export const sendEmailVerification = asyncHandler(async (req, res) => {
+  // Extract the user email
+  const { email } = req.body;
+
+  // Check the email
+  if (!email) throw new apiErrors(400, "Email is missing");
+
+  // Generate OTP
+  const otp = generateOTP();
+
+  // Store OTP in Redis
+  await storeOTP(email, otp);
+
+  // Send email
+  sendEmail(email, otp);
+
+  return res
+    .status(200)
+    .json(new apiSuccess(200, {}, "Email verification sent successfully"));
+});
+
+export const verifyEmail = asyncHandler(async (req, res) => {
+  // Get the otp from user
+  const { email, otp } = req.body;
+
+  // Check the otp
+  if (!otp || !email) throw new apiErrors(400, "OTP or email is missing");
+
+  // Verify OTP
+  const isVerified = await verifyOTP(email, otp);
+  if (!isVerified) throw new apiErrors(400, "Invalid OTP");
+
+  return res
+    .status(200)
+    .json(new apiSuccess(200, {}, "Email verified successfully"));
 });

@@ -3,6 +3,8 @@ import { Server } from "socket.io";
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import Redis from "ioredis";
+import rateLimit from "./middlewares/rateLimit.middleware.js";
 
 const app = express();
 
@@ -16,6 +18,19 @@ app.use(express.json({ limit: "16kb" }));
 app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
+app.use(rateLimit);
+
+// Redis Client Connection
+export const redisClient = new Redis({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  username: process.env.REDIS_USERNAME,
+  password: process.env.REDIS_PASSWORD,
+  maxRetriesPerRequest: null,
+  enableReadyCheck: false,
+});
+redisClient.on("connect", () => console.log("Connected to Redis"));
+redisClient.on("error", (err) => console.error("Redis Error:", err));
 
 // Create HTTP & WebSocket Server
 const server = http.createServer(app);
@@ -52,6 +67,8 @@ app.use("/api/v1/comments", commentRoute);
 app.use("/api/v1/subscriptions", subscriptionRoute);
 app.use("/api/v1/playlist", playlistRoute);
 app.use("/api/v1/dashboard", dashboardRoute);
+app.use("/api/v1/healthCheck", healthCheckRoute);
+import healthCheckRoute from "./routes/healthCheck.routes.js";
 
 export default server;
 // http://localhost:8000/api/v1/users/register
@@ -61,3 +78,4 @@ export default server;
 // http://localhost:8000/api/v1/subscriptions
 // http://localhost:8000/api/v1/playlist
 // http://localhost:8000/api/v1/dashboard
+// http://localhost:8000/api/v1/healthCheck
