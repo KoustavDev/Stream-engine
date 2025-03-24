@@ -24,6 +24,19 @@ export const uploadOnCloud = async (filePath) => {
   }
 };
 
+export const uploadOnCloudGoogle = async (filePath) => {
+  try {
+    if (!filePath) return null;
+    // Upload the file url to cloud.
+    const response = await cloudinary.uploader.upload(filePath, {
+      resource_type: "auto",
+    });
+    return response;
+  } catch (error) {
+    return null;
+  }
+};
+
 export const deleteOnCloud = async (publicId) => {
   try {
     const result = await cloudinary.uploader.destroy(publicId);

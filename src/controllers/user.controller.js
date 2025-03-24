@@ -60,7 +60,7 @@ export const registerUser = asyncHandler(async (req, res) => {
 });
 
 // it generate a access and refresh token and save it to teh user DB.
-async function generateAccessAndRefreshToken(userId) {
+export async function generateAccessAndRefreshToken(userId) {
   try {
     // Get the user from DB
     const user = await User.findById(userId);
@@ -119,6 +119,31 @@ export const loginUser = asyncHandler(async (req, res) => {
       new apiSuccess(
         200,
         { finalUser, accessToken, refreshToken },
+        "User logged In Successfully"
+      )
+    );
+});
+
+export const handleGoogleCallback = asyncHandler(async (req, res) => {
+  // Configure the cookies
+  const cookieConfig = {
+    httpOnly: true,
+    secure: true,
+  };
+
+  // Send response
+  return res
+    .status(200)
+    .cookie("accessToken", req.user.accessTokenJWT, cookieConfig)
+    .cookie("refreshToken", req.user.refreshTokenJWT, cookieConfig)
+    .json(
+      new apiSuccess(
+        200,
+        {
+          user: req.user.user,
+          accessToken: req.user.accessTokenJWT,
+          refreshToken: req.user.refreshTokenJWT,
+        },
         "User logged In Successfully"
       )
     );

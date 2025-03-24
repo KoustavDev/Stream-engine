@@ -5,6 +5,7 @@ import cors from "cors";
 import cookieParser from "cookie-parser";
 import Redis from "ioredis";
 import rateLimit from "./middlewares/rateLimit.middleware.js";
+import configurePassport from "./utils/passport.js";
 
 const app = express();
 
@@ -19,6 +20,9 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 app.use(express.static("public"));
 app.use(cookieParser());
 app.use(rateLimit);
+
+// Configure passport
+configurePassport();
 
 // Redis Client Connection
 export const redisClient = new Redis({
@@ -79,3 +83,4 @@ export default server;
 // http://localhost:8000/api/v1/playlist
 // http://localhost:8000/api/v1/dashboard
 // http://localhost:8000/api/v1/healthCheck
+// http://localhost:8000/api/v1/users/auth/google  -> google auth route

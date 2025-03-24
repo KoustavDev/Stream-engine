@@ -41,6 +41,10 @@ const userSchema = new Schema(
     refreshToken: {
       type: String,
     },
+    googleLogin: {
+      type: Boolean,
+      default: false,
+    },
   },
   { timestamps: true }
 );
