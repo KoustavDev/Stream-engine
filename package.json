@@ -11,6 +11,9 @@
   "author": "Koustav majhi",
   "license": "ISC",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.782.0",
+    "@aws-sdk/cloudfront-signer": "^3.775.0",
+    "@aws-sdk/s3-request-presigner": "^3.782.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^2.5.1",
     "cookie-parser": "^1.4.7",

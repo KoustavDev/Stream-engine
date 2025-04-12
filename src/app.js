@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import Redis from "ioredis";
 import rateLimit from "./middlewares/rateLimit.middleware.js";
 import configurePassport from "./utils/passport.js";
+import { S3Client } from "@aws-sdk/client-s3";
 
 const app = express();
 
@@ -50,9 +51,32 @@ export const io = new Server(server, {
 io.on("connection", (socket) => {
   console.log(`Client connected: ${socket.id}`);
 
-  socket.on("disconnect", () => {
+  socket.on("register", async (userId) => {
+    if (!userId) return;
+    // Store socket ID in Redis with a 1-hour expiration
+    await redisClient.set(`socket:${userId}`, socket.id, "EX", 3600);
+    console.log(`Mapped user ${userId} to socket ${socket.id}`);
+
+    socket.userId = userId;
+  });
+
+  socket.on("disconnect", async () => {
+    if (socket.userId) {
+      // Remove socket ID from Redis when the user disconnects
+      await redisClient.del(`socket:${socket.userId}`);
+      console.log(`Unmapped user ${socket.userId} from socket ${socket.id}`);
+    }
     console.log(`Client disconnected: ${socket.id}`);
   });
+});
+
+// S3 Client Connection
+export const s3Client = new S3Client({
+  region: "ap-south-1",
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
 });
 
 // Import routers
@@ -63,6 +87,7 @@ import commentRoute from "./routes/comments.routes.js";
 import subscriptionRoute from "./routes/subscription.routes.js";
 import playlistRoute from "./routes/playlist.routes.js";
 import dashboardRoute from "./routes/dashboard.routes.js";
+import healthCheckRoute from "./routes/healthCheck.routes.js";
 
 app.use("/api/v1/users", userRoute);
 app.use("/api/v1/videos", videoRoute);
@@ -72,7 +97,11 @@ app.use("/api/v1/subscriptions", subscriptionRoute);
 app.use("/api/v1/playlist", playlistRoute);
 app.use("/api/v1/dashboard", dashboardRoute);
 app.use("/api/v1/healthCheck", healthCheckRoute);
-import healthCheckRoute from "./routes/healthCheck.routes.js";
+
+// V2 Routes
+import videoRoute_v2 from "./routes/v2-video.routes.js";
+
+app.use("/api/v2/videos", videoRoute_v2);
 
 export default server;
 // http://localhost:8000/api/v1/users/register
@@ -84,3 +113,7 @@ export default server;
 // http://localhost:8000/api/v1/dashboard
 // http://localhost:8000/api/v1/healthCheck
 // http://localhost:8000/api/v1/users/auth/google  -> google auth route
+
+// V2
+
+// http://localhost:8000/api/v2/videos
