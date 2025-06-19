@@ -148,8 +148,8 @@ You can locally simulate this behavior by setting the following env vars:
 ```bash
 export AWS_ACCESS_KEY_ID=...
 export AWS_SECRET_ACCESS_KEY=...
-export BUCKET_NAME=temp-raw.video.koustav.test
-export PRODUCTION_BUCKET=production-videos.koustav.test
+export BUCKET_NAME=raw.video.koustav
+export PRODUCTION_BUCKET=production-videos.koustav
 export KEY=uploads/sample.mp4
 ```
 
