@@ -8,7 +8,7 @@ This project leverages **Cloudinary**, **AWS (S3, Lambda, ECS, CloudFront, Step 
 
 ## 📖 Live API Documentation
 
-> 🔗 Visit: [https://doc-stream-engine.netlify.app/](https://doc-stream-engine.netlify.app/)
+> 🔗 Visit: [https://doc-stream-engine.netlify.app](https://doc-stream-engine.netlify.app)
 
 A complete interactive Swagger/OpenAPI 3.0 specification of all backend endpoints is available here. This includes authentication, upload, video streaming, and admin operations—with real request/response examples.
 
@@ -64,7 +64,7 @@ Unlike the initial Cloudinary implementation, **Version 2** introduces a complet
 
    * AWS **CloudFront** serves HLS playlists and chunks to clients globally.
 
-📊 **Detailed explanation with diagram includes** – See the `/docs` folder for the AWS Step Function architecture image.
+📊 **Detailed explanation with diagram includes** – See the [`/src/docs`](https://github.com/KoustavDev/Stream-engine/blob/main/src/doc/transcoding.md) folder for the AWS Step Function architecture image .
 
 ---
 
