@@ -1,0 +1,43 @@
+FROM node:18-alpine
+
+# Update and install essential packages
+RUN apk update && apk upgrade
+
+# Install FFmpeg and AWS tools
+RUN apk add --no-cache \
+    ffmpeg \
+    aws-cli \
+    ca-certificates \
+    python3 \
+    py3-pip \
+    build-base \
+    curl \
+    bash \
+    gcompat \
+    openssl \
+    procps \
+    jq
+
+# Make directory structure
+WORKDIR /app
+
+# Install npm dependencies first (better layer caching)
+COPY package.json . 
+COPY package-lock.json* ./ 
+RUN npm install
+RUN npm install glob
+
+# Copy application code
+COPY index.js .
+
+# Create temp directories
+RUN mkdir -p /tmp/output
+
+# Set execute permissions
+RUN chmod +x index.js
+
+# Set environment variables
+ENV NODE_ENV=production
+
+# Command to run the application
+CMD ["node", "index.js"]
