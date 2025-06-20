@@ -2,7 +2,7 @@
 
 Stream Engine’s video processing pipeline uses **AWS ECS**, **S3**, and **FFmpeg** to convert uploaded videos into adaptive bitrate HLS streams. This document explains how the ECS containers work, the FFmpeg commands used, and how the final master playlist is generated and uploaded to S3.
 
----
+
 
 ## 🧱 Overview of the Transcoding Architecture
 
@@ -28,7 +28,7 @@ Stream Engine’s video processing pipeline uses **AWS ECS**, **S3**, and **FFmp
    * A 4th ECS task generates a `master.m3u8` playlist linking all three variants.
    * It deletes the raw video from `Raw.video` bucket to save space.
 
----
+
 
 ## ⚙️ ECS Transcoding Task – 1080p
 
@@ -67,7 +67,7 @@ index.m3u8
 
 > 🔁 This logic is **replicated** across separate containers for 720p and 480p, with just different FFmpeg scale and bitrate values.
 
----
+
 
 ## 📂 Output Directory Structure
 
@@ -88,7 +88,7 @@ It gets uploaded to:
 s3://production-videos.koustav/video-id/stream_0/
 ```
 
----
+
 
 ## 🧠 Master Playlist Generator
 
@@ -119,7 +119,7 @@ stream_2/index.m3u8
 s3://production-videos.koustav/video-id/master.m3u8
 ```
 
----
+
 
 ## 🧹 Cleanup Logic
 
@@ -130,7 +130,7 @@ The task:
 * Deletes the raw `.mp4` file from `Raw.video`
 * Ensures only production-ready, optimized files are retained
 
----
+
 
 ## 🔐 Security & Optimization Notes
 
@@ -139,7 +139,7 @@ The task:
 * Segments are short (`hls_time = 10s`) and aligned (`hls_flags = independent_segments`) for better streaming experience.
 * All tasks are isolated and stateless—making it highly scalable.
 
----
+
 
 ## 🧪 Testing & Simulation
 
@@ -160,7 +160,7 @@ node ecs-transcode-1080p.js
 node generate-master-playlist.js
 ```
 
----
+
 
 ## ✅ Summary
 
