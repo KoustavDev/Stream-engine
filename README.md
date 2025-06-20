@@ -4,7 +4,7 @@
 
 This project leverages **Cloudinary**, **AWS (S3, Lambda, ECS, CloudFront, Step Functions)**, **HLS streaming**, and **Redis** to deliver a modern backend infrastructure for smooth video playback and efficient system performance.
 
----
+
 
 ## 📖 Live API Documentation
 
@@ -12,7 +12,7 @@ This project leverages **Cloudinary**, **AWS (S3, Lambda, ECS, CloudFront, Step 
 
 A complete interactive Swagger/OpenAPI 3.0 specification of all backend endpoints is available here. This includes authentication, upload, video streaming, and admin operations—with real request/response examples.
 
----
+
 
 ## 🚀 Features
 
@@ -25,7 +25,7 @@ A complete interactive Swagger/OpenAPI 3.0 specification of all backend endpoint
 * ⚖️ **Rate Limiting** using Token Bucket Algorithm (Redis + Lua)
 * 🧪 **Version 2** with full AWS-powered streaming pipeline & CDN
 
----
+
 
 ## 📦 Version 2: Custom AWS-Based HLS Pipeline
 
@@ -66,7 +66,7 @@ Unlike the initial Cloudinary implementation, **Version 2** introduces a complet
 
 📊 **Detailed explanation with diagram includes** – See the [`/src/docs`](https://github.com/KoustavDev/Stream-engine/blob/main/src/doc/transcoding.md) folder for the AWS Step Function architecture image .
 
----
+
 
 ## 🛡️ Why We Use the Token Bucket Algorithm
 
@@ -87,7 +87,7 @@ To ensure backend stability and fair API usage, we implemented **Token Bucket-ba
 * **Global Bucket**: Max 5 requests/sec across all clients.
 * **Per-IP Bucket**: Max 2 requests/sec per user/IP.
 
----
+
 
 ## 💡 Technologies Used
 
@@ -103,7 +103,7 @@ To ensure backend stability and fair API usage, we implemented **Token Bucket-ba
 | CDN (Initial Ver.) | Cloudinary                                      |
 | Backend Framework  | Node.js + Express                               |
 
----
+
 
 ## 📁 Folder Structure (Important Folders Only)
 
@@ -121,7 +121,7 @@ To ensure backend stability and fair API usage, we implemented **Token Bucket-ba
 └── README.md
 ```
 
----
+
 
 ## 🧪 How to Run Locally
 
@@ -135,19 +135,19 @@ npm run dev
 
 > ⚠️ Make sure Redis, AWS IAM roles, Lambda permissions, AWS architecture and Cloudinary setup (if used) are configured.
 
----
+
 
 ## 🧠 Inspiration & Learnings
 
 This project was built not just to mimic existing platforms like YouTube, but to **learn and implement real-world system design**: rate limiting, CDN, video processing pipelines, and scalable server patterns.
 
----
+
 
 ## 🤝 Contributing
 
 Pull requests and discussions are welcome! Please make sure to lint your code and document new APIs/features.
 
----
+
 
 ## 📜 License
 
